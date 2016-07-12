@@ -13,7 +13,7 @@ MongoClient.connect(mongoURI, function(error, db) {
 
     db.createCollection('test', function(error, collection) {
         if (!error) {
-            console.log("Collection retrieved: ", collection);
+            console.log("Collection retrieved: ");//, collection);
         } else {
             console.error("Error creating collection...", error);
         }
@@ -21,7 +21,7 @@ MongoClient.connect(mongoURI, function(error, db) {
 
     db.createCollection('encounters', function(error, collection) {
         if (!error) {
-            console.log("Collection retrieved: ", collection);
+            console.log("Collection retrieved: ");//, collection);
         } else {
             console.error("Error creating collection...", error);
         }
@@ -78,7 +78,8 @@ app.post('/submit', function(request, response) {
         // Ensure there is atleast one entry, and that it has a pokemon ID and location info
         if (newEntries[0] && newEntries[0].pokemon_id && newEntries[0].latitude && newEntries[0].longitude) {
             // console.log(dataBase);
-            dataBase.collection('test')
+            // dataBase.collection('test')
+            dataBase.collection('encounters')
             .insert(newEntries, function(err, result) { 
                 console.log("Post insert result:", result); 
             });
@@ -87,12 +88,24 @@ app.post('/submit', function(request, response) {
         } else {
             console.log("Incorrect:",newEntry);
             // response.send({ message: "Did not enter find"});
-            res.status(400).send({ error: 'Bad Request :: newEntry invalid' });
+            response.status(400).send({ error: 'Bad Request :: newEntry invalid' });
         }
     }
 })
 
-app.get("/dump", function(request, response) { response.send({ message: "Still working on it..." }); });
+app.get("/dump", function(request, response) { 
+    // response.send({ message: "Still working on it..." }); 
+    // dataBase.collection('test').find().toArray(function(error, items) {
+    dataBase.collection('encounters').find().toArray(function(error, items) {
+        if (!error) {
+            response.render('pages/dump', { items: items }); 
+            // response.send({ message: "Dump of collection: Test", data: items }); 
+        } else {
+            console.error("Dump Error:", error);
+            response.status(500).send({ error: 'DUMP FAILED' });
+        }
+    });
+});
 
 // Get location of encounter
 app.post('/location/:coordinates', function(request, response) {
