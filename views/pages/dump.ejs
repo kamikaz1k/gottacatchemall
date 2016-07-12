@@ -25,6 +25,10 @@
        <pre><%= JSON.stringify(items[i]) %></pre>
     <% } %>
     </div>
+
+    <%if (items.length === 0) { %>
+    <div class="row">No entries for this one...</div>
+    <% } %>
     
   <div>
 

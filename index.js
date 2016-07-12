@@ -107,6 +107,25 @@ app.get("/dump", function(request, response) {
     });
 });
 
+app.get("/query", function(request, response) { 
+    // response.send({ message: "Still working on it..." }); 
+    // dataBase.collection('test').find().toArray(function(error, items) {
+    if (!request.query.pokemon_id) {
+        response.status(400).send({ error: 'No Pokemon ID Provided' });
+        
+    } else {
+        dataBase.collection('encounters').find({ pokemon_id: request.query.pokemon_id }).toArray(function(error, items) {
+            if (!error) {
+                response.render('pages/dump', { items: items }); 
+                // response.send({ message: "Dump of collection: Test", data: items }); 
+            } else {
+                console.error("Dump Error:", error);
+                response.status(500).send({ error: 'DUMP FAILED' });
+            }
+        });
+    }
+});
+
 // Get location of encounter
 app.post('/location/:coordinates', function(request, response) {
   console.log("Coordinate:", request.params.coordinates);
