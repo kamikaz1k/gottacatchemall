@@ -22,10 +22,12 @@ MongoClient.connect(mongoURI, function(error, db) {
     db.createCollection('encounters', function(error, collection) {
         if (!error) {
             console.log("Collection retrieved: ");//, collection);
+            collection.createIndex( { loc : "2dsphere" } );
         } else {
             console.error("Error creating collection...", error);
         }
     });
+
     // db.createCollection('test', {strict:true}, function(err, collection) {});
 
   } else {
@@ -61,6 +63,7 @@ function encounter (pokemon_id, pokemon_name, latitude, longitude, datetime, tra
     this.pokemon_name = pokemon_name; 
     this.latitude = latitude; 
     this.longitude = longitude; 
+    this.loc = { type: "Point", coordinates: [ parseFloat(longitude), parseFloat(latitude) ] };
     this.datetime = datetime; 
     this.trainer_level = trainer_level;
 }
@@ -83,18 +86,21 @@ app.post('/submit', function(request, response) {
 
         // Ensure there is atleast one entry, and that it has a pokemon ID and location info
         if (newEntries[0] && newEntries[0].pokemon_id && newEntries[0].latitude && newEntries[0].longitude) {
-            // console.log(dataBase);
-            // dataBase.collection('test')
+
             dataBase.collection('encounters')
-            .insert(newEntries, function(err, result) { 
-                console.log("Post insert result:", result); 
+            .insert(newEntries, function(error, result) { 
+                if (error) { 
+                    console.log("Insertion ERROR result:", error); 
+                } else {
+                    console.log("Post insert result:", result); 
+                }
             });
 
             response.send({ message: "Entered find"});
+            
         } else {
             console.log("Incorrect:",newEntry);
-            // response.send({ message: "Did not enter find"});
-            response.status(400).send({ error: 'Bad Request :: newEntry invalid' });
+            response.status(400).send({ error: 'Bad Request :: new Entry invalid' });
         }
     }
 })
@@ -114,22 +120,22 @@ app.get("/dump", function(request, response) {
 });
 
 app.get("/query", function(request, response) { 
-    // response.send({ message: "Still working on it..." }); 
-    // dataBase.collection('test').find().toArray(function(error, items) {
+
     if (request.query.pokemon_id || (request.query.latitude && request.query.longitude)) {
 
         var options = {};
         if (request.query.pokemon_id) options.pokemon_id = request.query.pokemon_id;
 
         if (request.query.latitude && request.query.longitude) {
-            var range = request.query.range || 2;
-            options.latitude = { 
-                "$lt" : request.query.latitude + range , 
-                "$gt" : request.query.latitude - range
-            }
-            options.longitude = { 
-                "$lt" : request.query.longitude + range , 
-                "$gt" : request.query.longitude - range
+            var range = request.query.range || 5;
+
+            options.loc = { 
+                $geoWithin: { 
+                    $centerSphere: [ 
+                        [ parseFloat(request.query.longitude), parseFloat(request.query.latitude) ], 
+                        range / 3963.2 // range is in miles -- convert to ...something
+                    ] 
+                } 
             }
 
         }
