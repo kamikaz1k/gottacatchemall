@@ -42,8 +42,14 @@ app.set('view engine', 'ejs');
 // Shared lib scripts
 app.use('/libs', express.static(__dirname + '/libs'));
 
-app.get('/', function(request, response) {
-  response.render('pages/game');
+app.get('/', function (request, response) {
+  response.render('pages/locate');
+  // response.render('pages/game');
+});
+
+app.get('/ping', function (request, response) {
+    // response.send({})
+    console.log(dataBase);
 });
 
 app.get('/submit', function(request, response) {
@@ -110,11 +116,25 @@ app.get("/dump", function(request, response) {
 app.get("/query", function(request, response) { 
     // response.send({ message: "Still working on it..." }); 
     // dataBase.collection('test').find().toArray(function(error, items) {
-    if (!request.query.pokemon_id) {
-        response.status(400).send({ error: 'No Pokemon ID Provided' });
-        
-    } else {
-        dataBase.collection('encounters').find({ pokemon_id: request.query.pokemon_id }).toArray(function(error, items) {
+    if (request.query.pokemon_id || (request.query.latitude && request.query.longitude)) {
+
+        var options = {};
+        if (request.query.pokemon_id) options.pokemon_id = request.query.pokemon_id;
+
+        if (request.query.latitude && request.query.longitude) {
+            var range = request.query.range || 2;
+            options.latitude = { 
+                "$lt" : request.query.latitude + range , 
+                "$gt" : request.query.latitude - range
+            }
+            options.longitude = { 
+                "$lt" : request.query.longitude + range , 
+                "$gt" : request.query.longitude - range
+            }
+
+        }
+
+        dataBase.collection('encounters').find(options).toArray(function(error, items) {
             if (!error) {
                 response.render('pages/dump', { items: items }); 
                 // response.send({ message: "Dump of collection: Test", data: items }); 
@@ -123,6 +143,8 @@ app.get("/query", function(request, response) {
                 response.status(500).send({ error: 'DUMP FAILED' });
             }
         });
+    } else {     
+        response.status(400).send({ error: 'Query not recognized...' });
     }
 });
 
